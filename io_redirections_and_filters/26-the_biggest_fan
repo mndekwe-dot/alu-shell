@@ -1,0 +1,4 @@
+#!/bin/bash
+# Read from stdin, skip the header, count requests per host, sort, and display top 11
+
+awk 'NR>1 {print $1}' | sort | uniq -c | sort -rn | head -n 11 | awk '{print $2}'

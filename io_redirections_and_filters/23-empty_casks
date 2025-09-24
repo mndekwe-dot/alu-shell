@@ -1,0 +1,6 @@
+#!/bin/bash
+find . -empty -print | while read path; do
+    # Remove leading directory path
+    name="${path##*/}"
+    echo "$name"
+done

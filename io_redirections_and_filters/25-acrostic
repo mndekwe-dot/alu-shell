@@ -1,0 +1,8 @@
+#!/bin/bash
+# Read from stdin and print the first character of each line
+while IFS= read -r line; do
+    # Print the first character without newline
+    printf '%s' "${line:0:1}"
+done
+# End with a newline
+echo
