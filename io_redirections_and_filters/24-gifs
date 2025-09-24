@@ -1,9 +1,2 @@
 #!/bin/bash
-# Find all regular files ending with .gif in the current directory and subdirectories
-find . -type f -name "*.gif" | while read path; do
-    # Extract the filename without path
-    file="${path##*/}"
-    # Remove the .gif extension
-    name="${file%.gif}"
-    echo "$name"
-done | sort -f
+find . -type f -name "*.gif" | while read path; do file="${path##*/}" name="${file%.gif}" echo "$name" done | sort -f
