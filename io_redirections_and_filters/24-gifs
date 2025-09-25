@@ -1,2 +1,2 @@
 #!/bin/bash
-find . -type f -name "*.gif" | while read path; do file="${path##*/}" name="${file%.gif}" echo "$name" done | sort -f
+find . -type f -name "*.gif" -printf "%f\n" | sed 's/\.gif$//' | sort -f
