@@ -1,2 +1,2 @@
 #!/bin/bash
-export
+export -p | cut -d' ' -f3-
