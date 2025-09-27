@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# This script displays the visitor IP and HTTP status code from an Apache access log without using awk
+
+while IFS=' ' read -r ip _ _ _ _ _ _ _ status _; do
+  echo "$ip $status"
+done < apache-access.log
+
