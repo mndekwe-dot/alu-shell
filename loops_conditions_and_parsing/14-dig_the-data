@@ -1,18 +1,4 @@
 #!/usr/bin/env bash
-# This script groups visitors by IP and HTTP status code and displays the number of occurrences using pure Bash
+# This script groups visitors by IP and HTTP status code and displays the number of occurrences
 
-declare -A count
-
-# Read the log line by line
-while read -r line; do
-  ip=$(echo "$line" | cut -d' ' -f1)
-  status=$(echo "$line" | cut -d' ' -f9)
-  key="$ip $status"
-  ((count["$key"]++))
-done < apache-access.log
-
-# Print counts
-for key in "${!count[@]}"; do
-  printf "%d %s\n" "${count[$key]}" "$key"
-done | sort -rn
-
+awk '{count[$1" "$9]++} END {for (key in count) print count[key], key}' apache-access.log | sort -rn
