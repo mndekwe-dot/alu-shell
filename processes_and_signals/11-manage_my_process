@@ -1,26 +1,12 @@
 #!/bin/bash
 
-# Init script to manage manage_my_process daemon
+# File: manage_my_process
+# Description: An infinitely running script that writes "I am alive!" to /tmp/my_process every 2 seconds.
 
-case "$1" in
-	start)
-		./manage_my_process &
-		echo $! > /var/run/my_process.pid
-		echo "manage_my_process started"
-		;;
-	stop)
-		kill $(cat /var/run/my_process.pid)
-		rm /var/run/my_process.pid
-		echo "manage_my_process stopped"
-		;;
-	restart)
-		kill $(cat /var/run/my_process.pid)
-		rm /var/run/my_process.pid
-		./manage_my_process &
-		echo $! > /var/run/my_process.pid
-		echo "manage_my_process restarted"
-		;;
-	*)
-		echo "Usage: manage_my_process {start|stop|restart}"
-		;;
-esac
+LOG_FILE="/tmp/my_process"
+
+# Infinite loop
+while true; do
+    echo "I am alive!" >> "$LOG_FILE"
+    sleep 2
+done
