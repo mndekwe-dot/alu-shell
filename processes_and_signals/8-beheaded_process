@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
-# This script kills the process named 7-highlander
+# This script finds and kills the process running the program '7-highlander'.
 
-# Find the PID(s) of the process named 7-highlander and kill them
-pkill -f 7-highlander
+# pkill searches for processes by name and sends a signal to them.
+# The default signal is SIGTERM (15), which gracefully requests the process to terminate.
+# Using 'pkill' is cleaner and more idiomatic than combining 'pgrep' and 'kill'.
+pkill 7-highlander
 
+# Optional: Add a check for success/failure
+if [ $? -eq 0 ]; then
+    echo "Successfully sent termination signal to 7-highlander."
+else
+    echo "Could not find or kill the process '7-highlander'. It may not be running."
+fi
