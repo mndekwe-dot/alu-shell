@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-
-# File: manage_my_process
-# Description: An infinitely running script that writes "I am alive!" to /tmp/my_process every 2 seconds.
+# This script continuously writes "I am alive!" to a log file every 2 seconds.
 
 LOG_FILE="/tmp/my_process"
 
