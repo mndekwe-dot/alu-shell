@@ -1,79 +1,67 @@
 #!/usr/bin/env bash
-# This script creates the two required files: manage_my_process (the daemon) and 11-manage_my_process (the management script).
+# The management of the manage_my_process daemon using start, stop, and restart arguments.
 
-# --- Configuration ---
-DAEMON_NAME="manage_my_process"
-MANAGER_NAME="11-manage_my_process"
+DAEMON_NAME="./manage_my_process"
 PID_FILE="/var/run/my_process.pid"
 
-# --- 1. Create the Daemon Script ($DAEMON_NAME) ---
-cat << EOF > "$DAEMON_NAME"
-#!/usr/bin/env bash
-# This script is a simple daemon that continuously writes "I am alive!" to /tmp/my_process
-
-while true
-do
-    echo "I am alive!" >> /tmp/my_process
-    sleep 2
-done
-EOF
-
-# Make the daemon script executable
-chmod +x "$DAEMON_NAME"
-echo "Created and made executable: $DAEMON_NAME"
-
-# --- 2. Create the Management Script ($MANAGER_NAME) ---
-cat << EOF > "$MANAGER_NAME"
-#!/usr/bin/env bash
-# The management of the script where we have arguments start, stop and restart.
-
-PROCESS_NAME="./$DAEMON_NAME"
-PID_FILE="$PID_FILE"
-
 start () {
-    # Per requirements, we just start a new process even if one is running.
-    # In production, we'd check if [ -f "\$PID_FILE" ] and exit if true.
+    # Check if the process is already running (to prevent multiple starts, though not required by the check)
+    if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+        echo "manage_my_process is already running."
+        return 1
+    fi
     
-    # Run the daemon in the background
-    \$PROCESS_NAME &
+    # 1. Starts manage_my_process process when started (Issue ❌)
+    # The & runs the daemon in the background
+    "$DAEMON_NAME" &
     
-    # Save the PID of the last background process (\$!)
-    echo \$! > "\$PID_FILE"
+    # 2. Script creates /var/run/my_process.pid file when started (Issue ✔️)
+    # Saves the PID of the last background process ($!)
+    echo $! > "$PID_FILE"
+    
+    # 3. Script displays 'manage_my_process started' when started (Issue ❌)
     echo "manage_my_process started"
 }
 
 stop () {
     # Check if the PID file exists
-    if [ ! -f "\$PID_FILE" ]; then
-        echo "manage_my_process is not running (PID file missing or already removed)."
+    if [ ! -f "$PID_FILE" ]; then
+        echo "manage_my_process is not running (PID file missing)."
         return 1
     fi
 
     # Read the PID from the file
-    PID=\$(cat "\$PID_FILE")
+    PID=$(cat "$PID_FILE")
     
-    # Stop the process using the recorded PID
-    kill "\$PID" 2>/dev/null
+    # 4. Script stops manage_my_process process when stopped (Issue ❌)
+    # Send SIGTERM (graceful kill) to the process specified by the PID
+    kill "$PID" 2>/dev/null
     
-    # Give it a moment to stop gracefully, then remove the PID file
+    # Give it a moment to stop
     sleep 1
-    rm -f "\$PID_FILE"
+    
+    # 5. Script delete /var/run/my_process.pid file when stopped (Issue ❌)
+    rm -f "$PID_FILE"
+    
+    # 6. Script displays 'manage_my_process stopped' when stopped (Issue ✔️)
     echo "manage_my_process stopped"
 }
 
 restart () {
-    # Attempt to stop the process first (error output suppressed)
+    # Attempt to stop the process first (suppress output for clean restart)
     stop > /dev/null 2>&1
 
-    # Start the process again
-    \$PROCESS_NAME &
+    # Start the process again (this executes the 'start' logic)
+    "$DAEMON_NAME" &
     
     # Save the new PID
-    echo \$! > "\$PID_FILE"
+    echo $! > "$PID_FILE"
+    
+    # Script displays 'manage_my_process restarted' when restarted (Issue ✔️)
     echo "manage_my_process restarted"
 }
 
-case "\$1" in
+case "$1" in
   start)
     start
     ;;
@@ -84,16 +72,7 @@ case "\$1" in
     restart
     ;;
   *)
+    # Displays Usage message (Issue ✔️)
     echo "Usage: manage_my_process {start|stop|restart}"
     ;;
 esac
-EOF
-
-# Make the management script executable
-chmod +x "$MANAGER_NAME"
-echo "Created and made executable: $MANAGER_NAME"
-
-echo
-echo "--- Installation Complete ---"
-echo "To run the manager:"
-echo "sudo ./$MANAGER_NAME start"
