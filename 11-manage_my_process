@@ -1,66 +1,90 @@
 #!/usr/bin/env bash
-# The management of the manage_my_process daemon using start, stop, and restart arguments.
+# This script manages the process lifecycle (start, stop, restart) and also contains the daemon logic.
 
-DAEMON_NAME="./manage_my_process"
+# --- Configuration ---
+DAEMON_BASENAME="manage_my_process"
 PID_FILE="/var/run/my_process.pid"
+# Internal argument used to trigger the daemon loop
+DAEMON_FLAG="--daemon-loop"
+
+# ----------------------------------------------------
+# A. DAEMON LOGIC (The actual work process)
+# ----------------------------------------------------
+daemon_loop () {
+    # This function is the actual program being run in the background.
+    while true
+    do
+        echo "I am alive!" >> /tmp/my_process
+        sleep 2
+    done
+}
+
+# ----------------------------------------------------
+# B. MANAGER LOGIC (The init script functions)
+# ----------------------------------------------------
 
 start () {
-    # Check if the process is already running (to prevent multiple starts, though not required by the check)
+    # Check if the process is already running (optional, but good practice)
     if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
-        echo "manage_my_process is already running."
+        echo "$DAEMON_BASENAME is already running."
         return 1
     fi
     
-    # 1. Starts manage_my_process process when started (Issue ❌)
-    # The & runs the daemon in the background
-    "$DAEMON_NAME" &
+    # Execute THIS script again with the internal flag, running it in the background (&)
+    # This starts the daemon_loop() function as a separate process.
+    "$0" "$DAEMON_FLAG" &
     
-    # 2. Script creates /var/run/my_process.pid file when started (Issue ✔️)
-    # Saves the PID of the last background process ($!)
+    # Save the PID of the last background process ($!)
     echo $! > "$PID_FILE"
     
-    # 3. Script displays 'manage_my_process started' when started (Issue ❌)
-    echo "manage_my_process started"
+    echo "$DAEMON_BASENAME started"
 }
 
 stop () {
-    # Check if the PID file exists
     if [ ! -f "$PID_FILE" ]; then
-        echo "manage_my_process is not running (PID file missing)."
+        echo "$DAEMON_BASENAME is not running (PID file missing)."
         return 1
     fi
 
-    # Read the PID from the file
     PID=$(cat "$PID_FILE")
     
-    # 4. Script stops manage_my_process process when stopped (Issue ❌)
-    # Send SIGTERM (graceful kill) to the process specified by the PID
+    # Send SIGTERM to the process specified by the PID
     kill "$PID" 2>/dev/null
     
-    # Give it a moment to stop
-    sleep 1
+    # Wait for the process to truly terminate
+    wait "$PID" 2>/dev/null
     
-    # 5. Script delete /var/run/my_process.pid file when stopped (Issue ❌)
+    # Delete the PID file
     rm -f "$PID_FILE"
     
-    # 6. Script displays 'manage_my_process stopped' when stopped (Issue ✔️)
-    echo "manage_my_process stopped"
+    echo "$DAEMON_BASENAME stopped"
 }
 
 restart () {
     # Attempt to stop the process first (suppress output for clean restart)
     stop > /dev/null 2>&1
 
-    # Start the process again (this executes the 'start' logic)
-    "$DAEMON_NAME" &
+    # Start the process again
+    "$0" "$DAEMON_FLAG" &
     
     # Save the new PID
     echo $! > "$PID_FILE"
     
-    # Script displays 'manage_my_process restarted' when restarted (Issue ✔️)
-    echo "manage_my_process restarted"
+    echo "$DAEMON_BASENAME restarted"
 }
 
+# ----------------------------------------------------
+# C. EXECUTION FLOW
+# ----------------------------------------------------
+
+# Check if the script was called with the internal flag to run the daemon
+if [ "$1" == "$DAEMON_FLAG" ]; then
+    daemon_loop
+    # The daemon loop will run indefinitely or until killed.
+    exit $?
+fi
+
+# Otherwise, process the external arguments for management
 case "$1" in
   start)
     start
@@ -72,7 +96,6 @@ case "$1" in
     restart
     ;;
   *)
-    # Displays Usage message (Issue ✔️)
-    echo "Usage: manage_my_process {start|stop|restart}"
+    echo "Usage: $DAEMON_BASENAME {start|stop|restart}"
     ;;
 esac
