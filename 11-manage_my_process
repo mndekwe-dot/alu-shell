@@ -1,9 +1,69 @@
 #!/usr/bin/env bash
-# manage_my_process - Writes "I am alive!" to /tmp/my_process indefinitely
+# The management of the script where we have arguments start, stop and restart.
 
-while true
-do
-    echo "I am alive!" >> /tmp/my_process
-    sleep 2
-done
+PROCESS_NAME="./manage_my_process"
+PID_FILE="/var/run/my_process.pid"
 
+start () {
+    # Check if the process is already running (optional, but good practice for init scripts)
+    if [ -f "$PID_FILE" ]; then
+        echo "manage_my_process is already running."
+        return 1
+    fi
+    
+    # Run the daemon in the background
+    $PROCESS_NAME &
+    
+    # Save the PID of the last background process ($!)
+    echo $! > "$PID_FILE"
+    echo "manage_my_process started"
+}
+
+stop () {
+    # Check if the PID file exists
+    if [ ! -f "$PID_FILE" ]; then
+        echo "manage_my_process is not running (PID file missing)."
+        return 1
+    fi
+
+    # Read the PID from the file
+    PID=$(cat "$PID_FILE")
+    
+    # Use the PID to stop the process gracefully (SIGTERM)
+    kill "$PID" 2>/dev/null
+    
+    # Wait a moment, then force kill if still running (optional, but robust)
+    sleep 1
+    kill -9 "$PID" 2>/dev/null
+
+    # Remove the PID file
+    rm -f "$PID_FILE"
+    echo "manage_my_process stopped"
+}
+
+restart () {
+    # Use the stop function to stop the running process (errors are ignored if not running)
+    stop > /dev/null 2>&1
+
+    # Start the process again
+    $PROCESS_NAME &
+    
+    # Save the new PID
+    echo $! > "$PID_FILE"
+    echo "manage_my_process restarted"
+}
+
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  restart)
+    restart
+    ;;
+  *)
+    echo "Usage: manage_my_process {start|stop|restart}"
+    ;;
+esac
