@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
-# Kill the 7-highlander process
+# kill the process and instaed of displaying terminated we display killed.
 
-kill $(pgrep -f "7-highlander")
+ pkill -9 -f 7-highlander
+
+ 
