@@ -1,59 +1,79 @@
 #!/usr/bin/env bash
-# The management of the script where we have arguments start, stop and restart.
+# This script creates the two required files: manage_my_process (the daemon) and 11-manage_my_process (the management script).
 
-PROCESS_NAME="./manage_my_process"
+# --- Configuration ---
+DAEMON_NAME="manage_my_process"
+MANAGER_NAME="11-manage_my_process"
 PID_FILE="/var/run/my_process.pid"
 
+# --- 1. Create the Daemon Script ($DAEMON_NAME) ---
+cat << EOF > "$DAEMON_NAME"
+#!/usr/bin/env bash
+# This script is a simple daemon that continuously writes "I am alive!" to /tmp/my_process
+
+while true
+do
+    echo "I am alive!" >> /tmp/my_process
+    sleep 2
+done
+EOF
+
+# Make the daemon script executable
+chmod +x "$DAEMON_NAME"
+echo "Created and made executable: $DAEMON_NAME"
+
+# --- 2. Create the Management Script ($MANAGER_NAME) ---
+cat << EOF > "$MANAGER_NAME"
+#!/usr/bin/env bash
+# The management of the script where we have arguments start, stop and restart.
+
+PROCESS_NAME="./$DAEMON_NAME"
+PID_FILE="$PID_FILE"
+
 start () {
-    # Check if the process is already running (optional, but good practice for init scripts)
-    if [ -f "$PID_FILE" ]; then
-        echo "manage_my_process is already running."
-        return 1
-    fi
+    # Per requirements, we just start a new process even if one is running.
+    # In production, we'd check if [ -f "\$PID_FILE" ] and exit if true.
     
     # Run the daemon in the background
-    $PROCESS_NAME &
+    \$PROCESS_NAME &
     
-    # Save the PID of the last background process ($!)
-    echo $! > "$PID_FILE"
+    # Save the PID of the last background process (\$!)
+    echo \$! > "\$PID_FILE"
     echo "manage_my_process started"
 }
 
 stop () {
     # Check if the PID file exists
-    if [ ! -f "$PID_FILE" ]; then
-        echo "manage_my_process is not running (PID file missing)."
+    if [ ! -f "\$PID_FILE" ]; then
+        echo "manage_my_process is not running (PID file missing or already removed)."
         return 1
     fi
 
     # Read the PID from the file
-    PID=$(cat "$PID_FILE")
+    PID=\$(cat "\$PID_FILE")
     
-    # Use the PID to stop the process gracefully (SIGTERM)
-    kill "$PID" 2>/dev/null
+    # Stop the process using the recorded PID
+    kill "\$PID" 2>/dev/null
     
-    # Wait a moment, then force kill if still running (optional, but robust)
+    # Give it a moment to stop gracefully, then remove the PID file
     sleep 1
-    kill -9 "$PID" 2>/dev/null
-
-    # Remove the PID file
-    rm -f "$PID_FILE"
+    rm -f "\$PID_FILE"
     echo "manage_my_process stopped"
 }
 
 restart () {
-    # Use the stop function to stop the running process (errors are ignored if not running)
+    # Attempt to stop the process first (error output suppressed)
     stop > /dev/null 2>&1
 
     # Start the process again
-    $PROCESS_NAME &
+    \$PROCESS_NAME &
     
     # Save the new PID
-    echo $! > "$PID_FILE"
+    echo \$! > "\$PID_FILE"
     echo "manage_my_process restarted"
 }
 
-case "$1" in
+case "\$1" in
   start)
     start
     ;;
@@ -67,3 +87,13 @@ case "$1" in
     echo "Usage: manage_my_process {start|stop|restart}"
     ;;
 esac
+EOF
+
+# Make the management script executable
+chmod +x "$MANAGER_NAME"
+echo "Created and made executable: $MANAGER_NAME"
+
+echo
+echo "--- Installation Complete ---"
+echo "To run the manager:"
+echo "sudo ./$MANAGER_NAME start"
