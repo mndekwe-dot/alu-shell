@@ -1,10 +1,31 @@
 #!/usr/bin/env bash
-# This script continuously writes "I am alive!" to a log file every 2 seconds.
-
-LOG_FILE="/tmp/my_process"
-
-# Infinite loop
-while true; do
-    echo "I am alive!" >> "$LOG_FILE"
-    sleep 2
-done
+# The management of the script where we have arguments start,stop and restart.
+                                                  
+start () {                                         
+    ./11-manage_my_process &                          
+    echo $! > /var/run/my_process.pid              
+    echo "manage_my_process started"               
+}                                                  
+                                                  
+stop () {                                          
+    pkill -f "./manage_my_process"                 
+    rm /var/run/my_process.pid                     
+    echo "manage_my_process stopped"               
+}                                                  
+                                                  
+restart () {                                       
+    pkill -f "./manage_my_process"                 
+    rm /var/run/my_process.pid                     
+    ./manage_my_process &                          
+    echo $! >> /var/run/my_process.pid             
+    echo "manage_my_process restarted"             
+}
+case "$1" in                                       
+  start) start ;;                                 
+  stop)  stop;;                                   
+  restart) restart;;                              
+  *) echo "Usage: manage_my_process {start|stop|r\
+estart}"                                           
+                                                  
+      ;;                                           
+esac
